@@ -1,0 +1,31 @@
+# Node modules
+node_modules/
+
+# Environment files
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# VS Code settings
+.vscode/
+
+# Optional build directories
+dist/
+build/
+
+# Others (si usas pruebas u otros entornos)
+coverage/
+*.tsbuildinfo
+
+# lockfiles (solo si no quieres subirlos)
+# package-lock.json
+# yarn.lock

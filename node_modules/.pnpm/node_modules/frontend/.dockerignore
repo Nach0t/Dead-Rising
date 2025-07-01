@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.vscode
+*.log
+*.glb
+*.mp3
+*.png
+*.jpg

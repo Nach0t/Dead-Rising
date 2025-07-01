@@ -1,37 +1,46 @@
-# Dead Rising - Proyecto General
+# 🧟 Dead Rising - Zombie Survival FPS
 
-Este repositorio contiene todo el proyecto del juego Dead Rising.
+**Dead Rising** es un juego en primera persona desarrollado con Vue y Three.js. El jugador debe sobrevivir lo máximo posible eliminando zombies y gestionando su salud.
 
----
+## 📦 Estructura del proyecto
 
-## 🧩 Estructura del Repositorio
+- `frontend/` - Interfaz del juego en Vue 3 + Three.js
+- `backend/` - API Node.js con MongoDB para guardar ranking y usuarios
+- `tests/` - Pruebas unitarias y de integración
+- `.github/workflows/` - CI con Teorema de la Caja: Testear, Construir, Publicar
 
-| Carpeta     | Descripción                                                       |
-|-------------|-------------------------------------------------------------------|
-| frontend/   | Juego completo en Vue + Vite + Three.js (terminado y funcional)  |
-| backend/    | En desarrollo: API para autenticación, ranking y lógica de datos |
+## 🚀 Ejecución
 
----
-
-## 🚀 CI/CD con GitHub Actions
-
-- CI.yml: build + test + Docker + push
-- Lint.yml: ESLint, Stylelint, Prettier
-- Docker.yml: build Docker + push
-- Lighthouse.yml: análisis de calidad y rendimiento
-
----
-
-## 🐳 Docker Hub
-
-Imagen: [nach0t/dead-rising](https://hub.docker.com/r/nach0t/dead-rising)
+Puedes ejecutar el proyecto directamente con:
 
 ```bash
-docker pull nach0t/dead-rising:latest
-docker run -p 5173:5173 nach0t/dead-rising:latest
+./run_all.sh
 ```
 
----
+En Windows:
+
+```bat
+run_all.bat
+```
+
+O bien manualmente:
+
+```bash
+pnpm install
+pnpm dev
+```
+
+## 🐳 Docker
+
+```bash
+docker compose up --build
+```
+
+## 🧪 Test
+
+```bash
+pnpm test
+```
 
 ## ✍️ Autores
 

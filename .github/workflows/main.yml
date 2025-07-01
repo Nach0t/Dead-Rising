@@ -34,18 +34,11 @@ jobs:
         with:
           version: 8
 
-      - name: 🟩 Instalar dependencias backend
-        working-directory: ./backend
+      - name: 🟢 Instalar dependencias raíz
         run: pnpm install
 
-      - name: 🧪 Ejecutar tests si existen
-        working-directory: ./backend
-        run: |
-          if pnpm run | grep -q test; then
-            pnpm test
-          else
-            echo "ℹ️ No hay script 'test'. Caja de test pasada por alto."
-          fi
+      - name: 🧪 Ejecutar tests completos (backend + frontend)
+        run: pnpm test
 
   # 📦 CAJA 2: BUILD (solo si test pasa)
   build:

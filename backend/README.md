@@ -1,55 +1,32 @@
 # 🧠 Backend - Dead Rising
 
-Este es el backend de **Dead Rising**, un juego FPS de supervivencia zombie. Esta API fue desarrollada usando **FastAPI**, y se encarga de gestionar usuarios, autenticación, rankings y puntuaciones.
+Este es el backend de **Dead Rising**, un juego FPS de supervivencia zombie. Desarrollado en **Node.js** con **Express** y **MongoDB**, gestiona el sistema de autenticación, ranking de jugadores y almacenamiento de estadísticas.
 
 ---
 
-## 🚧 Funcionalidades principales
+## 🚀 Funcionalidades principales
 
-- 📥 Registro de nuevos jugadores
-- 🔐 Inicio de sesión con autenticación JWT
-- 🧠 Consulta del perfil de jugador autenticado
-- 🏆 Envío y consulta de puntajes para el ranking global
-- ✅ Validación de datos con Pydantic
-- 🗄️ Persistencia de datos usando SQLite y SQLAlchemy
+- Registro e inicio de sesión con JWT
+- Almacenamiento de jugadores, puntuaciones y estadísticas en MongoDB
+- Consulta del ranking global
+- Middleware de autenticación
+- API REST con rutas protegidas y públicas
+
 
 ---
 
-## 📁 Estructura del proyecto
+## ⚙️ Variables de entorno
+
+Asegúrate de crear un archivo `.env` en `backend/` con lo siguiente:
 
 ```
-backend/
-│
-├── main.py              # Punto de entrada principal
-├── database.py          # Conexión y configuración de la base de datos
-├── models/              # Modelos de base de datos con SQLAlchemy
-├── schemas/             # Esquemas Pydantic para validar datos
-├── routes/              # Archivos con endpoints divididos por funcionalidad
-├── auth/                # Funciones de seguridad y generación de tokens JWT
-├── utils/               # Funciones auxiliares para distintos módulos
-├── requirements.txt     # Dependencias del backend
-└── .env (opcional)      # Variables de entorno
+MONGO_URI=mongodb://127.0.0.1:27017/testdb
+JWT_SECRET=chokominto
 ```
 
 ---
 
-## ⚙️ Configuración
-
-Puedes configurar el backend mediante un archivo `.env` en la carpeta `backend/`. Ejemplo:
-
-```
-DATABASE_URL=sqlite:///./database.db
-JWT_SECRET=tu_clave_secreta
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-```
-
-- Si no configuras `.env`, se utilizarán valores por defecto.
-- Puedes cambiar SQLite por PostgreSQL modificando `DATABASE_URL`.
-
----
-
-## 🔧 Cómo ejecutar el backend
+## 🧪 Cómo ejecutar
 
 1. Clona el repositorio:
 
@@ -58,83 +35,58 @@ git clone https://github.com/Nach0t/Dead-Rising.git
 cd Dead-Rising/backend
 ```
 
-2. (Opcional) Crea y activa un entorno virtual:
+2. Instala dependencias:
 
 ```bash
-python -m venv venv
-# En Windows:
-venv\Scripts\activate
-# En Linux/Mac:
-source venv/bin/activate
+pnpm install
+# o
+npm install
 ```
 
-3. Instala las dependencias:
+3. Ejecuta el backend:
 
 ```bash
-pip install -r requirements.txt
-```
-
-4. Ejecuta el servidor:
-
-```bash
-python main.py
+pnpm start
+# o
+npm start
 ```
 
 ---
 
-## 🌐 Acceso a la API
+## 🧪 Tests
 
-Una vez iniciado el servidor, puedes acceder desde:
-
-- Swagger UI (documentación interactiva):
-  http://127.0.0.1:8000/docs
-- Redoc (documentación alternativa):
-  http://127.0.0.1:8000/redoc
-- OpenAPI (JSON):
-  http://127.0.0.1:8000/openapi.json
-
----
-
-## 🧪 Test
-
-Para ejecutar los tests (si hay una carpeta `tests/` configurada):
+Si tienes configurado Jest o Vitest:
 
 ```bash
-pytest tests/
+pnpm test
+# o
+npm test
 ```
 
 ---
 
-## 🐳 Docker
+## 🐳 Docker (opcional)
 
-Puedes levantar el backend automáticamente usando Docker Compose (desde la raíz del proyecto):
+Puedes levantar el backend con MongoDB usando Docker Compose desde la raíz del proyecto:
 
 ```bash
 docker compose up --build
 ```
 
-Esto:
-
-- Instala dependencias automáticamente
-- Levanta el servidor con FastAPI
-- Usa SQLite como base de datos por defecto
-
 ---
 
 ## 🔐 Endpoints principales
 
-- `POST /auth/register` → Registrar nuevo usuario
-- `POST /auth/login` → Iniciar sesión y obtener token JWT
-- `GET /me` → Ver datos del jugador autenticado
-- `POST /ranking` → Enviar puntuación
-- `GET /ranking` → Ver ranking global
+- `POST /register` → Registro de nuevo jugador
+- `POST /login` → Login y obtención de token
+- `GET /me` → Información del jugador autenticado
+- `POST /ranking` → Envío de puntuación
+- `GET /ranking` → Consulta del ranking global
 
 ---
 
-## 📦 Recomendaciones
+## 📌 Notas
 
-- Usa SQLite solo en desarrollo. Para producción, cambia a PostgreSQL o MySQL.
-- Mantén el archivo `.env` fuera del control de versiones (usa `.gitignore`).
-- Siempre valida los datos en `schemas/` antes de operar con la base de datos.
-
----
+- Usa `pnpm` para compatibilidad con el entorno de CI/CD.
+- Asegúrate de que MongoDB esté corriendo o usa Docker.
+- El backend corre por defecto en `http://localhost:3000/`.

@@ -16,6 +16,7 @@ services:
       - ./backend/.env.docker
     depends_on:
       - mongo
+    restart: always
 
   mongo:
     image: mongo:6

@@ -1,17 +1,17 @@
 # 🎮 Frontend - Dead Rising
 
-Este es el frontend de **Dead Rising**, un FPS de supervivencia zombie. Desarrollado con **Vue 3** y **Three.js**, permite renderizar la escena 3D, controlar al jugador, interactuar con los zombies y sincronizar datos con el backend.
+Este es el frontend de **Dead Rising**, un FPS de supervivencia zombie. Desarrollado con **Vue 3** y **Three.js**, permite renderizar una escena 3D inmersiva, controlar al jugador, interactuar con zombies y sincronizar datos con el backend.
 
 ---
 
 ## 🚀 Funcionalidades principales
 
-- Renderizado 3D con Three.js (zombies, escenario, jugador)
-- Control de movimiento y disparos del jugador
-- Interfaz HUD: vida, puntuación, munición
-- Sistema de login y registro conectado al backend
-- Consulta y envío de puntuación al ranking global
-- Almacenamiento de sesión JWT
+- Renderizado 3D con **Three.js** (escenario, zombies, jugador)
+- Control en primera persona con mouse y teclado
+- Disparo y detección de colisiones
+- HUD con vida, tiempo, puntuación y ranking
+- Sistema de login y registro con token JWT
+- Envío de estadísticas al backend (ranking global)
 
 ---
 
@@ -22,92 +22,81 @@ frontend/
 │
 ├── public/             # Archivos públicos (index.html, favicon)
 ├── src/
-│   ├── main.js         # Inicialización de Vue y Three.js
-│   ├── App.vue         # Componente raíz
-│   ├── components/     # HUD, login, paneles, interfaz
-│   ├── scenes/         # Código 3D (modelos, luces, cámara, lógica de juego)
-│   ├── composables/    # Hooks Vue personalizados (useAuth, useGame)
-│   ├── store/          # Pinia: auth, game state, config
+│   ├── main.js         # Inicialización de Vue
+│   ├── App.vue         # Componente raíz del juego
+│   ├── components/     # HUD, menús, login/registro
+│   ├── scenes/         # Lógica 3D y motor del juego
+│   ├── composables/    # Hooks reutilizables (auth, juego)
+│   ├── store/          # Estado global (Pinia)
 │   ├── assets/         # Modelos, texturas, sonidos
-│   ├── styles/         # Estilos globales y específicos
-│   └── utils/          # Funciones auxiliares (fetch, debounce, cálculos)
-├── .env.example        # Ejemplo de configuración
-├── vite.config.js      # Configuración de Vite (build, alias, env)
+│   ├── styles/         # Estilos globales
+│   └── utils/          # Funciones auxiliares (fetch, lógica)
+├── .env.example        # Archivo de ejemplo con variables de entorno
+├── vite.config.js      # Configuración de Vite
 └── package.json        # Scripts y dependencias
 ```
 
 ---
 
-## ⚙️ Configuración
+## 🧩 Instalación local
 
-Crea un archivo `.env` en la carpeta `frontend/` con el siguiente contenido:
-
-```
-VITE_BACKEND_URL=http://localhost:8000
-VITE_ASSETS_PATH=/assets/
-```
-
-Puedes adaptar `VITE_BACKEND_URL` si el backend corre en otro host/puerto o en producción.
-
----
-
-## 🧩 Instalación
-
-1. Asegúrate de tener Node.js y un gestor de paquetes (npm, yarn o pnpm)
-
-2. Instala dependencias:
+1. **Clona el repositorio**:
 
 ```bash
-cd frontend
-npm install
-# o
-yarn
-# o
-pnpm install
+git clone https://github.com/Nach0t/Dead-Rising.git
+cd Dead-Rising/frontend
 ```
 
-3. Copia y edita el archivo de entorno:
+2. **Instala las dependencias**:
+
+```bash
+pnpm install
+# o alternativamente
+npm install
+```
+
+3. **Configura las variables de entorno**:
 
 ```bash
 cp .env.example .env
 ```
 
----
+Edita `.env` si el backend corre en otra URL/puerto:
 
-## 💻 Scripts de desarrollo
+```env
+VITE_BACKEND_URL=http://localhost:8000
+VITE_ASSETS_PATH=/assets/
+```
+
+4. **Lanza el servidor de desarrollo**:
 
 ```bash
-npm run dev       # Ejecuta servidor de desarrollo (hot reload)
-npm run build     # Compila el frontend para producción
-npm run preview   # Previsualiza la build de producción
+pnpm run dev
+# o
+npm run dev
+```
+
+Esto abrirá la app en `http://localhost:5173/`
+
+---
+
+## 💻 Scripts disponibles
+
+```bash
+pnpm run dev       # Servidor de desarrollo (hot reload)
+pnpm run build     # Build de producción
+pnpm run preview   # Previsualización de la build
+pnpm run test      # Ejecuta tests si están configurados
 ```
 
 ---
 
-## 🌐 Integración con backend
+## 🐳 Docker (opcional)
 
-- El frontend se comunica con el backend usando `fetch` y `axios`.
-- Se envían credenciales a `/auth/login`, `/auth/register`, `/ranking`, etc.
-- El token JWT se almacena en `localStorage` y se incluye en las cabeceras de las peticiones protegidas.
-- `VITE_BACKEND_URL` controla la URL base de la API.
-
----
-
-## 🧪 Test
-
-Si el proyecto tiene configurado Jest o Vitest:
-
-```bash
-npm run test
-```
-
----
-
-## 🐳 Docker
-
-Puedes dockerizar el frontend y backend juntos desde la raíz del proyecto. Ejemplo en `docker-compose.yml`:
+Puedes lanzar frontend y backend juntos con `docker compose`:
 
 ```yaml
+# docker-compose.yml
 services:
   frontend:
     build: ./frontend
@@ -124,11 +113,19 @@ docker compose up --build
 
 ---
 
-## 📌 Notas adicionales
+## 🌐 Comunicación con backend
 
-- Puedes optimizar los modelos 3D y texturas para mejor rendimiento.
-- Cambia el título del juego en `public/index.html`.
-- Puedes personalizar controles y cámara en `scenes/engine.js`.
-- Si se hospeda en un dominio distinto al backend, asegúrate de habilitar CORS.
+- Se usan `axios` y `fetch` para las peticiones.
+- JWT se guarda en `localStorage` y se envía en las cabeceras.
+- Endpoints clave:
+  - `/auth/login`, `/auth/register`
+  - `/ranking`, `/game/score`
 
 ---
+
+## 📌 Notas adicionales
+
+- Asegúrate de que el backend esté corriendo antes de iniciar el frontend.
+- Si cambias el dominio o puerto, edita `VITE_BACKEND_URL`.
+- Si usas un servidor externo, configura CORS en el backend.
+- Puedes personalizar controles, sensibilidad y cámara en `scenes/`.

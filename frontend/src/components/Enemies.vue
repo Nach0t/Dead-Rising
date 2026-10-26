@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount } from 'vue'
+import { onMounted, onBeforeUnmount, watch } from 'vue'
 import * as THREE from 'three'
 import { scene, updateFunctions } from '@/sceneGlobals'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
@@ -12,15 +12,21 @@ const props = defineProps({ paused: Boolean })
 
 let enemies = []
 let mixers = []
-let spawnInterval
-let player
+let spawnInterval = null
+let waitPlayerInterval = null
+let player = null
+
 const loader = new GLTFLoader()
 const clock = new THREE.Clock()
-const enemySpeed = 0.015
-const maxEnemies = 5
+
+const enemySpeed = 2.2 // Velocidad en unidades por segundo (usando delta)
+const maxEnemies = 8
+const stopDistance = 1.1 // Distancia a la que se detienen frente al jugador
+const attackRange = 1.4  // Rango en el que pueden lanzar el golpe
 
 const attackSound = new Audio('/sounds/zombie-scream.mp3')
-attackSound.loop = true
+attackSound.loop = false
+attackSound.volume = 0.6
 
 function disposeZombie(zombie) {
   zombie.traverse(child => {
@@ -43,106 +49,127 @@ function disposeZombie(zombie) {
 
 function loadZombieModel() {
   return new Promise((resolve, reject) => {
-    loader.load('/models/zombie.glb', gltf => {
-      const zombie = gltf.scene
-      zombie.scale.set(0.28, 0.28, 0.28)
-      zombie.position.y = 0.25
+    loader.load(
+      '/models/zombie.glb',
+      gltf => {
+        const zombie = gltf.scene
+        zombie.scale.set(0.28, 0.28, 0.28)
+        zombie.position.y = 0.25
 
-      const mixer = new THREE.AnimationMixer(zombie)
-      const walkAnim = gltf.animations.find(a => a.name.toLowerCase().includes('walk'))
-      const punchAnim = gltf.animations.find(a => a.name.toLowerCase().includes('punch'))
+        const mixer = new THREE.AnimationMixer(zombie)
+        const walkAnim = gltf.animations.find(a =>
+          a.name.toLowerCase().includes('walk')
+        )
+        const punchAnim = gltf.animations.find(a =>
+          a.name.toLowerCase().includes('punch') ||
+          a.name.toLowerCase().includes('attack')
+        )
 
-      if (walkAnim) {
-        zombie.userData.walk = mixer.clipAction(walkAnim)
-        zombie.userData.walk.play()
-      }
-
-      if (punchAnim) {
-        zombie.userData.punch = mixer.clipAction(punchAnim)
-      }
-
-      zombie.box = new THREE.Box3()
-      zombie.boxHelper = new THREE.Box3Helper(zombie.box, 0xffff00)
-      scene.add(zombie.boxHelper)
-
-      zombie.userData.isDead = false
-
-      zombie.die = () => {
-        if (zombie.userData.isDead) return
-        zombie.userData.isDead = true
-
-        zombie.userData.walk?.stop()
-        zombie.userData.punch?.stop()
-
-        scene.remove(zombie)
-        scene.remove(zombie.boxHelper)
-        disposeZombie(zombie)
-
-        const idx = enemies.indexOf(zombie)
-        if (idx !== -1) {
-          enemies.splice(idx, 1)
-          mixers.splice(idx, 1)
+        if (walkAnim) {
+          zombie.userData.walk = mixer.clipAction(walkAnim)
+          zombie.userData.walk.play()
         }
 
-        if (typeof window.incrementZombieKills === 'function') {
-          window.incrementZombieKills()
+        if (punchAnim) {
+          const punchAction = mixer.clipAction(punchAnim)
+          punchAction.setLoop(THREE.LoopOnce)
+          punchAction.clampWhenFinished = true
+          zombie.userData.punch = punchAction
         }
-      }
 
-      resolve({ zombie, mixer })
-    }, undefined, reject)
+        zombie.box = new THREE.Box3()
+        zombie.userData.isDead = false
+        zombie.userData.lastAttackTime = 0
+
+        zombie.die = () => {
+          if (zombie.userData.isDead) return
+          zombie.userData.isDead = true
+
+          zombie.userData.walk?.stop()
+          zombie.userData.punch?.stop()
+
+          scene.remove(zombie)
+          disposeZombie(zombie)
+
+          const idx = enemies.indexOf(zombie)
+          if (idx !== -1) {
+            enemies.splice(idx, 1)
+            mixers.splice(idx, 1)
+          }
+
+          if (typeof window.incrementZombieKills === 'function') {
+            window.incrementZombieKills()
+          }
+        }
+
+        resolve({ zombie, mixer })
+      },
+      undefined,
+      reject
+    )
   })
 }
 
 async function spawnEnemies(count = 3) {
-  if (!player) return
+  if (!player || props.paused || window.stopSpawning) return
+
   const radius = 10
   const baseAngle = Math.random() * Math.PI * 2
 
   for (let i = 0; i < count && enemies.length < maxEnemies; i++) {
+    if (window.stopSpawning) break
+
     const angle = baseAngle + (i / count) * Math.PI * 2
-    const { zombie, mixer } = await loadZombieModel()
+    try {
+      const { zombie, mixer } = await loadZombieModel()
 
-    zombie.position.set(
-      player.position.x + Math.cos(angle) * radius,
-      0.25,
-      player.position.z + Math.sin(angle) * radius
-    )
+      let spawnX = player.position.x + Math.cos(angle) * radius
+      let spawnZ = player.position.z + Math.sin(angle) * radius
 
-    scene.add(zombie)
-    enemies.push(zombie)
-    mixers.push(mixer)
+      // Respetar límites del mapa si existen
+      if (window.mapLimits) {
+        const { xMin, xMax, zMin, zMax } = window.mapLimits
+        spawnX = Math.max(xMin, Math.min(xMax, spawnX))
+        spawnZ = Math.max(zMin, Math.min(zMax, spawnZ))
+      }
+
+      zombie.position.set(spawnX, 0.25, spawnZ)
+      zombie.box.setFromCenterAndSize(
+        zombie.position,
+        new THREE.Vector3(0.8, 1.6, 0.8)
+      )
+
+      scene.add(zombie)
+      enemies.push(zombie)
+      mixers.push(mixer)
+    } catch (err) {
+      console.error('❌ Error al generar zombie:', err)
+    }
   }
 }
 
 function checkBulletCollisions() {
   const bullets = window.bullets || []
+  if (!bullets.length || !enemies.length) return
 
   for (let i = bullets.length - 1; i >= 0; i--) {
     const bullet = bullets[i]
+    if (!bullet || !bullet.box) continue
+
     for (let j = enemies.length - 1; j >= 0; j--) {
       const enemy = enemies[j]
-      if (!enemy.box || !bullet.box || enemy.userData.isDead) continue
+      if (!enemy || !enemy.box || enemy.userData.isDead) continue
 
-      enemy.box.setFromCenterAndSize(enemy.position, new THREE.Vector3(0.7, 1.4, 0.7))
-      bullet.box.setFromCenterAndSize(bullet.position, new THREE.Vector3(0.8, 0.8, 0.8))
+      enemy.box.setFromCenterAndSize(
+        enemy.position,
+        new THREE.Vector3(0.8, 1.6, 0.8)
+      )
 
       if (enemy.box.intersectsBox(bullet.box)) {
-        console.log('Colisión bala-zombie')
-
-        enemy.traverse(obj => {
-          if (obj.isMesh && obj.material?.color) obj.material.color.set(0x0000ff)
-        })
-        enemy.boxHelper.material.color.set(0x0000ff)
-
-        bullet.traverse(obj => {
-          if (obj.isMesh && obj.material?.color) obj.material.color.set(0x0000ff)
-        })
-        bullet.boxHelper.material.color.set(0x0000ff)
-
         enemy.die?.()
+
         scene.remove(bullet)
-        scene.remove(bullet.boxHelper)
+        if (bullet.boxHelper) scene.remove(bullet.boxHelper)
         bullets.splice(i, 1)
         break
       }
@@ -151,71 +178,124 @@ function checkBulletCollisions() {
 }
 
 function updateEnemyLogic() {
-  if (props.paused) return
+  if (props.paused || window.stopSpawning) {
+    clock.getDelta() // Evitar salto brusco de tiempo al despausar
+    return
+  }
 
-  const delta = clock.getDelta()
+  const delta = Math.min(clock.getDelta(), 0.1)
   mixers.forEach(m => m.update(delta))
+
   if (!player) return
 
   checkBulletCollisions()
 
-  const playerBox = new THREE.Box3().setFromObject(player)
+  const now = performance.now()
 
   enemies.forEach((enemy, i) => {
     if (!enemy.visible || enemy.userData.isDead) return
 
-    enemy.box.setFromCenterAndSize(enemy.position, new THREE.Vector3(0.7, 1.4, 0.7))
-    enemy.boxHelper.box.copy(enemy.box)
+    enemy.box.setFromCenterAndSize(
+      enemy.position,
+      new THREE.Vector3(0.8, 1.6, 0.8)
+    )
+
+    // Mirar siempre hacia el jugador en el plano horizontal
+    enemy.lookAt(player.position.x, enemy.position.y, player.position.z)
 
     const distance = enemy.position.distanceTo(player.position)
-    const direction = new THREE.Vector3().subVectors(player.position, enemy.position).setY(0).normalize()
-    const nextPos = enemy.position.clone().addScaledVector(direction, enemySpeed)
-    const nextBox = new THREE.Box3().setFromCenterAndSize(nextPos, new THREE.Vector3(1, 1, 1))
 
-    let canMove = !nextBox.intersectsBox(playerBox)
-    for (let j = 0; j < enemies.length && canMove; j++) {
-      if (i !== j && enemies[j].visible && nextBox.intersectsBox(enemies[j].box)) {
+    // Movimiento hacia el jugador
+    if (distance > stopDistance) {
+      const direction = new THREE.Vector3()
+        .subVectors(player.position, enemy.position)
+        .setY(0)
+        .normalize()
+
+      const nextPos = enemy.position
+        .clone()
+        .addScaledVector(direction, enemySpeed * delta)
+
+      const nextBox = new THREE.Box3().setFromCenterAndSize(
+        nextPos,
+        new THREE.Vector3(0.75, 1.5, 0.75)
+      )
+
+      // Evitar que los zombies se superpongan entre sí
+      let canMove = true
+      if (player.box && nextBox.intersectsBox(player.box)) {
         canMove = false
-        break
+      }
+
+      for (let j = 0; j < enemies.length && canMove; j++) {
+        if (i !== j && enemies[j].visible && !enemies[j].userData.isDead) {
+          if (nextBox.intersectsBox(enemies[j].box)) {
+            canMove = false
+            break
+          }
+        }
+      }
+
+      if (canMove) {
+        enemy.position.copy(nextPos)
       }
     }
 
-    if (canMove && distance > 1.5) {
-      enemy.position.copy(nextPos)
-      enemy.lookAt(player.position.x, enemy.position.y, player.position.z)
-    }
+    // Lógica de ataque cuando está cerca del jugador
+    if (distance <= attackRange) {
+      if (now - enemy.userData.lastAttackTime > 1200) {
+        enemy.userData.lastAttackTime = now
 
-    if (distance < 0.9 && enemy.userData.punch && !enemy.userData.punch.isRunning()) {
-      enemy.userData.punch.reset().play()
-      if (attackSound.paused) attackSound.play()
-      if (typeof window.setPlayerHit === 'function') {
-        window.setPlayerHit(enemy.position.clone())
+        if (enemy.userData.punch) {
+          enemy.userData.punch.reset().play()
+        }
+
+        attackSound.currentTime = 0
+        attackSound.play().catch(() => {})
+
+        if (typeof window.setPlayerHit === 'function') {
+          window.setPlayerHit(enemy.position.clone())
+        }
       }
     }
   })
 }
 
 function startSpawningEnemies() {
+  spawnEnemies(3) // Primera oleada inmediata
   spawnInterval = setInterval(() => {
-    spawnEnemies()
+    if (!props.paused && !window.stopSpawning) {
+      spawnEnemies(2)
+    }
   }, 5000)
 }
 
-onMounted(() => {
-  player = window.player
-  if (!player) {
-    console.warn('⚠️ Enemies: jugador no cargado aún')
-    return
+watch(
+  () => props.paused,
+  isPaused => {
+    if (isPaused) {
+      attackSound.pause()
+    }
   }
+)
 
-  attackSound.play()
-  startSpawningEnemies()
-  updateFunctions.push(updateEnemyLogic)
-  window.enemies = enemies
+onMounted(() => {
+  // Esperar de forma segura a que PlayerCube inicialice window.player
+  waitPlayerInterval = setInterval(() => {
+    if (window.player) {
+      clearInterval(waitPlayerInterval)
+      player = window.player
+      startSpawningEnemies()
+      updateFunctions.push(updateEnemyLogic)
+      window.enemies = enemies
+    }
+  }, 100)
 })
 
 onBeforeUnmount(() => {
   clearInterval(spawnInterval)
+  clearInterval(waitPlayerInterval)
+
   mixers.forEach(m => m.stopAllAction())
   enemies.forEach(z => {
     scene.remove(z)
@@ -232,6 +312,3 @@ onBeforeUnmount(() => {
   attackSound.currentTime = 0
 })
 </script>
-
-<style scoped>
-</style>

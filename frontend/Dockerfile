@@ -1,5 +1,7 @@
 FROM node:20 AS builder
 WORKDIR /app
+ARG VITE_API_BASE_URL=http://localhost:3000
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 COPY . .
 RUN npm install -g pnpm
 RUN pnpm install

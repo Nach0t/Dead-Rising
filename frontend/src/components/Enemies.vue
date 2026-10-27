@@ -121,41 +121,41 @@ async function spawnEnemies(count = 3) {
     const baseAngle = Math.random() * Math.PI * 2
 
     for (let i = 0; i < count && enemies.length < maxEnemies; i++) {
-    if (window.stopSpawning) break
+      if (window.stopSpawning) break
 
-    const angle = baseAngle + (i / count) * Math.PI * 2
-    try {
-      const { zombie, mixer } = await loadZombieModel()
+      const angle = baseAngle + (i / count) * Math.PI * 2
+      try {
+        const { zombie, mixer } = await loadZombieModel()
 
-      // Discard loads that finish after leaving the current game.
-      if (isUnmounted || window.stopSpawning) {
-        mixer.stopAllAction()
-        disposeZombie(zombie)
-        continue
+        // Discard loads that finish after leaving the current game.
+        if (isUnmounted || window.stopSpawning) {
+          mixer.stopAllAction()
+          disposeZombie(zombie)
+          continue
+        }
+
+        let spawnX = player.position.x + Math.cos(angle) * radius
+        let spawnZ = player.position.z + Math.sin(angle) * radius
+
+        // Respetar límites del mapa si existen
+        if (window.mapLimits) {
+          const { xMin, xMax, zMin, zMax } = window.mapLimits
+          spawnX = Math.max(xMin, Math.min(xMax, spawnX))
+          spawnZ = Math.max(zMin, Math.min(zMax, spawnZ))
+        }
+
+        zombie.position.set(spawnX, 0.25, spawnZ)
+        zombie.box.setFromCenterAndSize(
+          zombie.position,
+          new THREE.Vector3(0.8, 1.6, 0.8)
+        )
+
+        scene.add(zombie)
+        enemies.push(zombie)
+        mixers.push(mixer)
+      } catch (err) {
+        console.error('❌ Error al generar zombie:', err)
       }
-
-      let spawnX = player.position.x + Math.cos(angle) * radius
-      let spawnZ = player.position.z + Math.sin(angle) * radius
-
-      // Respetar límites del mapa si existen
-      if (window.mapLimits) {
-        const { xMin, xMax, zMin, zMax } = window.mapLimits
-        spawnX = Math.max(xMin, Math.min(xMax, spawnX))
-        spawnZ = Math.max(zMin, Math.min(zMax, spawnZ))
-      }
-
-      zombie.position.set(spawnX, 0.25, spawnZ)
-      zombie.box.setFromCenterAndSize(
-        zombie.position,
-        new THREE.Vector3(0.8, 1.6, 0.8)
-      )
-
-      scene.add(zombie)
-      enemies.push(zombie)
-      mixers.push(mixer)
-    } catch (err) {
-      console.error('❌ Error al generar zombie:', err)
-    }
     }
   } finally {
     spawnInProgress = false

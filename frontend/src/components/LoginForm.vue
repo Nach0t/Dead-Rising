@@ -59,7 +59,7 @@ const login = async () => {
 
   try {
     const usuarioLimpio = nombreUsuario.value.trim()
-    const res = await axios.post('http://localhost:3000/api/login', {
+    const res = await axios.post('/api/login', {
       nombreUsuario: usuarioLimpio,
       contraseña: contraseña.value
     })

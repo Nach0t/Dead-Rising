@@ -3,7 +3,7 @@ import App from './App.vue'
 import axios from 'axios'
 
 // 1. Configurar la URL base de tu backend para no repetirla en los componentes
-axios.defaults.baseURL = 'http://localhost:3000'
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
 
 // 2. Importar los estilos globales de la aplicación
 import './style.css'

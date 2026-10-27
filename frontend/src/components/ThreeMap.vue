@@ -11,6 +11,22 @@ import * as THREE from 'three'
 const container = ref(null)
 
 let mapa = null
+let isUnmounted = false
+
+function disposeObject3D(root) {
+  root.traverse(child => {
+    child.geometry?.dispose()
+    if (child.material) {
+      const materials = Array.isArray(child.material) ? child.material : [child.material]
+      materials.forEach(material => {
+        material.map?.dispose()
+        material.normalMap?.dispose()
+        material.roughnessMap?.dispose()
+        material.dispose()
+      })
+    }
+  })
+}
 
 function onWindowResize() {
   if (!camera || !renderer) return
@@ -20,6 +36,7 @@ function onWindowResize() {
 }
 
 onMounted(() => {
+  isUnmounted = false
   scene.background = new THREE.Color(0x101010)
   camera.position.set(10.25, 5, 10.5)
   camera.lookAt(10.25, 0, 0.5)
@@ -45,6 +62,11 @@ onMounted(() => {
   // Carga del Mapa 3D
   const loader = new GLTFLoader()
   loader.load('/models/MapaConCubo.glb', gltf => {
+    if (isUnmounted) {
+      disposeObject3D(gltf.scene)
+      return
+    }
+
     mapa = gltf.scene
     scene.add(mapa)
 
@@ -80,6 +102,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  isUnmounted = true
   window.removeEventListener('resize', onWindowResize)
 
   // Limpiar variables globales de colisión
@@ -89,22 +112,7 @@ onBeforeUnmount(() => {
   // Remover mapa de la escena y liberar recursos GPU
   if (mapa) {
     scene.remove(mapa)
-    mapa.traverse(child => {
-      if (child.geometry) {
-        child.geometry.dispose()
-      }
-      if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach(mat => {
-            if (mat.map) mat.map.dispose()
-            mat.dispose()
-          })
-        } else {
-          if (child.material.map) child.material.map.dispose()
-          child.material.dispose()
-        }
-      }
-    })
+    disposeObject3D(mapa)
     mapa = null
   }
 })

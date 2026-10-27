@@ -108,7 +108,7 @@ const register = async () => {
 
   try {
     const usuarioLimpio = nombreUsuario.value.trim()
-    const res = await axios.post('http://localhost:3000/api/register', {
+    const res = await axios.post('/api/register', {
       nombreUsuario: usuarioLimpio,
       contraseña: contraseña.value
     })

@@ -4,36 +4,19 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount, ref } from 'vue'
-import { scene, camera, renderer, updateFunctions } from '@/sceneGlobals'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { scene, camera, renderer } from '@/sceneGlobals'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import * as THREE from 'three'
 
 const container = ref(null)
 
-let controls = null
 let mapa = null
-let animationFrameId = null
 
 function onWindowResize() {
   if (!camera || !renderer) return
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
   renderer.setSize(window.innerWidth, window.innerHeight)
-}
-
-function animate() {
-  animationFrameId = requestAnimationFrame(animate)
-  
-  // Ejecutar funciones globales registradas en el ciclo (jugador, enemigos, balas)
-  for (let i = 0; i < updateFunctions.length; i++) {
-    updateFunctions[i]()
-  }
-
-  if (controls) controls.update()
-  if (renderer && scene && camera) {
-    renderer.render(scene, camera)
-  }
 }
 
 onMounted(() => {
@@ -47,13 +30,6 @@ onMounted(() => {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     container.value.appendChild(renderer.domElement)
   }
-
-  // Configuración opcional de controles (primer plano usa movimiento libre, Orbit desactivado por defecto)
-  controls = new OrbitControls(camera, renderer.domElement)
-  controls.enableDamping = true
-  controls.enableRotate = false
-  controls.enableZoom = false
-  controls.enabled = false // Desactivado para dar el control total a primera persona
 
   // Luces de la escena
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.4)
@@ -100,27 +76,15 @@ onMounted(() => {
     console.log('✅ Mapa cargado y colisiones mapeadas:', window.mapObstacles.length)
   })
 
-  animate()
   window.addEventListener('resize', onWindowResize)
 })
 
 onBeforeUnmount(() => {
-  // Cancelar bucle de animación para evitar fugas de rendimiento
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId)
-  }
-
   window.removeEventListener('resize', onWindowResize)
 
   // Limpiar variables globales de colisión
   window.mapObstacles = []
   window.mapLimits = null
-
-  // Remover controles
-  if (controls) {
-    controls.dispose()
-    controls = null
-  }
 
   // Remover mapa de la escena y liberar recursos GPU
   if (mapa) {

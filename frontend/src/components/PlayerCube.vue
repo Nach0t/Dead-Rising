@@ -86,6 +86,7 @@ let rankingGuardado = false
 let canBeHit = true
 const immunityTime = 1500
 let intervaloTiempo = null
+let damageResetTimeout = null
 
 // Variables Three.js y físicas
 let player = null
@@ -305,11 +306,11 @@ function updatePlayerLogic() {
 }
 
 // Funciones globales para comunicación con Enemies.vue
-window.incrementZombieKills = () => {
+const incrementZombieKillsHandler = () => {
   zombiesEliminados.value++
 }
 
-window.setPlayerHit = (attackerPosition = null) => {
+const setPlayerHitHandler = (attackerPosition = null) => {
   if (!canBeHit || health.value <= 0 || props.paused) return
   gotHit.value = true
   health.value = Math.max(0, health.value - 25)
@@ -327,14 +328,19 @@ window.setPlayerHit = (attackerPosition = null) => {
     damageAngle.value = cross > 0 ? -angle : angle
   }
 
-  setTimeout(() => {
+  damageResetTimeout = setTimeout(() => {
     gotHit.value = false
     canBeHit = true
     damageAngle.value = null
+    damageResetTimeout = null
   }, immunityTime)
 }
 
-window.getZombieKillFunction = () => zombiesEliminados
+const getZombieKillFunctionHandler = () => zombiesEliminados
+
+window.incrementZombieKills = incrementZombieKillsHandler
+window.setPlayerHit = setPlayerHitHandler
+window.getZombieKillFunction = getZombieKillFunctionHandler
 
 // Liberar el puntero automáticamente si se pausa o muere
 watch(() => props.paused, isPaused => {
@@ -357,7 +363,7 @@ watch(health, async val => {
 
     const puntaje = zombiesEliminados.value * 10 + tiempo.value
     try {
-      await axios.post('http://localhost:3000/ranking', {
+      await axios.post('/ranking', {
         nombreUsuario: nombreJugador,
         zombies: zombiesEliminados.value,
         tiempo: tiempo.value,
@@ -409,6 +415,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearInterval(intervaloTiempo)
+  if (damageResetTimeout) {
+    clearTimeout(damageResetTimeout)
+    damageResetTimeout = null
+  }
 
   document.removeEventListener('keydown', onKeyDown)
   document.removeEventListener('keyup', onKeyUp)
@@ -424,6 +434,10 @@ onBeforeUnmount(() => {
 
   if (player) scene.remove(player)
   scene.remove(yawObject)
+
+  if (window.incrementZombieKills === incrementZombieKillsHandler) delete window.incrementZombieKills
+  if (window.setPlayerHit === setPlayerHitHandler) delete window.setPlayerHit
+  if (window.getZombieKillFunction === getZombieKillFunctionHandler) delete window.getZombieKillFunction
 
   delete window.player
   delete window.bullets

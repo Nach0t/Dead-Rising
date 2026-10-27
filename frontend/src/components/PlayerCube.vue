@@ -166,10 +166,14 @@ function onMouseDown(e) {
 }
 
 function loadBulletModel() {
-  if (window.modelCache?.balaModel) {
-    bulletTemplate = window.modelCache.balaModel
+  // ModelLoader guarda cada recurso como { scene, animations }.
+  // Aceptar también el formato antiguo por compatibilidad durante la transición.
+  const cachedBullet = window.modelCache?.balaModel
+  if (cachedBullet) {
+    bulletTemplate = cachedBullet.scene ?? cachedBullet
     return
   }
+
   const loader = new GLTFLoader()
   loader.load('/models/bala_bullet.glb', gltf => {
     bulletTemplate = gltf.scene

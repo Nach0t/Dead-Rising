@@ -32,7 +32,7 @@ jobs:
       - name: 🔧 Instalar pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 9
 
       - name: 🟢 Instalar dependencias raíz
         run: pnpm install
@@ -52,7 +52,7 @@ jobs:
       - name: 🔧 Instalar pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 9
 
       - name: 🟢 Instalar dependencias frontend
         working-directory: ./frontend

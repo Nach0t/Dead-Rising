@@ -55,7 +55,7 @@ const niveles = ref([
 
 onMounted(async () => {
   try {
-    const res = await axios.get('http://localhost:3000/ranking')
+    const res = await axios.get('/ranking')
     const rankings = res.data
 
     // Distribuir jugadores en sus respectivos niveles

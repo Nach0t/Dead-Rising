@@ -73,7 +73,12 @@ export default {
       animationFrameId: null,
       enterHoldStart: null,
       enterHoldTimeout: null,
-      muerto: false
+      muerto: false,
+      
+      // Referencias para remover listeners limpiamente
+      handleKeyDownGlobal: null,
+      handleKeyUpGlobal: null,
+      playVideoWithSoundOnce: null
     }
   },
   methods: {
@@ -132,7 +137,11 @@ export default {
 
     const animate = () => {
       this.animationFrameId = requestAnimationFrame(animate)
-      updateFunctions.forEach(fn => fn())
+      
+      for (let i = 0; i < updateFunctions.length; i++) {
+        updateFunctions[i]()
+      }
+
       try {
         renderer.render(scene, camera)
       } catch (e) {
@@ -146,21 +155,20 @@ export default {
     animate()
 
     const video = this.$refs.introVideo
-    const playVideoWithSound = () => {
+    this.playVideoWithSoundOnce = () => {
       if (video) {
         video.muted = false
         video.volume = 1.0
         video.play().catch(e => console.warn('Autoplay failed:', e))
       }
-      window.removeEventListener('keydown', playVideoWithSoundOnce)
-      window.removeEventListener('mousedown', playVideoWithSoundOnce)
+      window.removeEventListener('keydown', this.playVideoWithSoundOnce)
+      window.removeEventListener('mousedown', this.playVideoWithSoundOnce)
     }
 
-    const playVideoWithSoundOnce = () => playVideoWithSound()
-    window.addEventListener('keydown', playVideoWithSoundOnce)
-    window.addEventListener('mousedown', playVideoWithSoundOnce)
+    window.addEventListener('keydown', this.playVideoWithSoundOnce)
+    window.addEventListener('mousedown', this.playVideoWithSoundOnce)
 
-    window.addEventListener('keydown', e => {
+    this.handleKeyDownGlobal = e => {
       if (e.key === 'Enter' && !this.enterHoldStart) {
         this.enterHoldStart = Date.now()
         this.enterHoldTimeout = setTimeout(() => {
@@ -168,26 +176,32 @@ export default {
         }, 5000)
       }
 
-      // Bloquear ESC si está muerto
       if (e.key === 'Escape' && this.muerto) {
         e.preventDefault()
         e.stopPropagation()
       }
-    })
+    }
 
-    window.addEventListener('keyup', e => {
+    this.handleKeyUpGlobal = e => {
       if (e.key === 'Enter') {
         this.enterHoldStart = null
         clearTimeout(this.enterHoldTimeout)
       }
-    })
-
-    this.cancelAnimation = () => {
-      if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
     }
+
+    window.addEventListener('keydown', this.handleKeyDownGlobal)
+    window.addEventListener('keyup', this.handleKeyUpGlobal)
   },
   beforeUnmount() {
-    if (this.cancelAnimation) this.cancelAnimation()
+    if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
+
+    if (this.handleKeyDownGlobal) window.removeEventListener('keydown', this.handleKeyDownGlobal)
+    if (this.handleKeyUpGlobal) window.removeEventListener('keyup', this.handleKeyUpGlobal)
+    if (this.playVideoWithSoundOnce) {
+      window.removeEventListener('keydown', this.playVideoWithSoundOnce)
+      window.removeEventListener('mousedown', this.playVideoWithSoundOnce)
+    }
+
     updateFunctions.length = 0
     while (scene.children.length > 0) {
       const obj = scene.children[0]
@@ -203,55 +217,3 @@ export default {
   }
 }
 </script>
-
-<style>
-.welcome-message {
-  color: yellow;
-  font-family: 'Creepster', cursive;
-  font-size: 22px;
-  margin-bottom: 10px;
-  text-align: center;
-}
-
-.logout-button {
-  margin-top: 12px;
-  background-color: black;
-  border: 2px solid red;
-  color: orange;
-  padding: 8px 14px;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: 0.3s;
-}
-
-.logout-button:hover {
-  background-color: red;
-  color: yellow;
-}
-
-.death-overlay {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 9999;
-}
-
-.btn-back-menu {
-  padding: 14px 28px;
-  font-size: 20px;
-  font-weight: bold;
-  background-color: black;
-  color: white;
-  border: 3px solid red;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-.btn-back-menu:hover {
-  background-color: red;
-  color: yellow;
-}
-</style>

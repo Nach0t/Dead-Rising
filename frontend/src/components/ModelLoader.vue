@@ -7,7 +7,9 @@ import { onMounted } from 'vue'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 
-// Modelos a precargar
+const emit = defineEmits(['loaded'])
+
+// Modelos a precargar globalmente
 const modelos = [
   { key: 'zombieModel', path: '/models/zombie.glb', scale: 0.28 },
   { key: 'balaModel', path: '/models/bala_bullet.glb', scale: 0.05 },
@@ -18,12 +20,16 @@ const modelos = [
 const loader = new GLTFLoader()
 
 function precargarModelos() {
+  let modelosCargados = 0
+  window.modelCache ??= {}
+
   modelos.forEach(({ key, path, scale }) => {
     loader.load(
       path,
       gltf => {
         const model = gltf.scene
         model.scale.set(scale, scale, scale)
+        
         model.traverse(child => {
           if (child.isMesh) {
             child.castShadow = true
@@ -38,12 +44,23 @@ function precargarModelos() {
         })
 
         model.visible = false
-        window.modelCache ??= {}
-        window.modelCache[key] = model
-        console.log(`✅ Modelo precargado: ${key}`)
+
+        // Guardamos tanto la escena 3D clonable como sus animaciones originales
+        window.modelCache[key] = {
+          scene: model,
+          animations: gltf.animations
+        }
+
+        console.log(`✅ Modelo precargado y cacheado: ${key}`)
+        
+        modelosCargados++
+        if (modelosCargados === modelos.length) {
+          console.log('🚀 Todos los modelos del juego están listos en memoria.')
+          emit('loaded')
+        }
       },
       undefined,
-      error => console.error(`❌ Error cargando ${path}:`, error)
+      error => console.error(`❌ Error crítico cargando el modelo ${path}:`, error)
     )
   })
 }

@@ -2,7 +2,13 @@
   <div class="auth-container">
     <h1>REGISTRO</h1>
     <form @submit.prevent="register">
-      <input v-model="nombreUsuario" placeholder="Usuario" class="input-zombie" required />
+      <input
+        v-model="nombreUsuario"
+        placeholder="Usuario"
+        class="input-zombie"
+        required
+        :disabled="loading"
+      />
 
       <div class="password-wrapper">
         <input
@@ -13,8 +19,14 @@
           minlength="6"
           maxlength="12"
           required
+          :disabled="loading"
         />
-        <span class="eye" @click="mostrarPass = !mostrarPass">👁️</span>
+        <span 
+          class="eye" 
+          @click="mostrarPass = !mostrarPass"
+          role="button"
+          aria-label="Mostrar u ocultar contraseña"
+        >👁️</span>
       </div>
 
       <div class="requirements">
@@ -31,16 +43,24 @@
           minlength="6"
           maxlength="12"
           required
+          :disabled="loading"
         />
-        <span class="eye" @click="mostrarPassConfirm = !mostrarPassConfirm">👁️</span>
+        <span 
+          class="eye" 
+          @click="mostrarPassConfirm = !mostrarPassConfirm"
+          role="button"
+          aria-label="Mostrar u ocultar confirmación de contraseña"
+        >👁️</span>
       </div>
 
       <p v-if="mensaje" class="message-zombie">{{ mensaje }}</p>
 
-      <button type="submit" class="button-zombie submit">Registrar</button>
+      <button type="submit" class="button-zombie submit" :disabled="loading">
+        {{ loading ? 'Registrando...' : 'Registrar' }}
+      </button>
     </form>
 
-    <button @click="cambiarAVistaLogin" class="button-zombie small">
+    <button @click="cambiarAVistaLogin" class="button-zombie small" :disabled="loading">
       ¿Ya tienes cuenta? Inicia sesión
     </button>
   </div>
@@ -58,11 +78,12 @@ const confirmarContraseña = ref('')
 const mensaje = ref('')
 const mostrarPass = ref(false)
 const mostrarPassConfirm = ref(false)
+const loading = ref(false)
 
-// Limpiar al cambiar a esta vista
-watch(() => nombreUsuario.value, () => mensaje.value = '')
-watch(() => contraseña.value, () => mensaje.value = '')
-watch(() => confirmarContraseña.value, () => mensaje.value = '')
+// Limpiar mensaje de error al escribir en cualquier campo
+watch([nombreUsuario, contraseña, confirmarContraseña], () => {
+  if (mensaje.value) mensaje.value = ''
+})
 
 const validarContraseña = (pass) => {
   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,12}$/
@@ -70,6 +91,7 @@ const validarContraseña = (pass) => {
 }
 
 const register = async () => {
+  if (loading.value) return
   mensaje.value = ''
 
   if (contraseña.value !== confirmarContraseña.value) {
@@ -82,16 +104,22 @@ const register = async () => {
     return
   }
 
+  loading.value = true
+
   try {
+    const usuarioLimpio = nombreUsuario.value.trim()
     const res = await axios.post('http://localhost:3000/api/register', {
-      nombreUsuario: nombreUsuario.value,
+      nombreUsuario: usuarioLimpio,
       contraseña: contraseña.value
     })
 
     localStorage.setItem('token', res.data.token)
-    emit('authenticated')
+    localStorage.setItem('nombreUsuario', usuarioLimpio)
+    emit('authenticated', usuarioLimpio)
   } catch (err) {
-    mensaje.value = err.response?.data?.error || 'Error al registrar'
+    mensaje.value = err.response?.data?.error || 'Error al conectar con el servidor'
+  } finally {
+    loading.value = false
   }
 }
 

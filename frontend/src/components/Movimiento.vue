@@ -1,5 +1,5 @@
 <template>
-  <div class="pointer-lock-area" @click="enablePointerLock"></div>
+  <div v-if="!paused" class="pointer-lock-area" @click="enablePointerLock"></div>
 
   <div v-if="damageAngle !== null" class="damage-ring">
     <div class="damage-sector" :style="{ transform: `rotate(${damageAngle}deg)` }"></div>
@@ -10,18 +10,24 @@
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import * as THREE from 'three'
 import { scene, updateFunctions, camera } from '@/sceneGlobals'
-import { initMovement, handleMovement } from './movimiento.js'
+import { initMovement, handleMovement, destroyMovement } from './movimiento.js'
 
-let player
+const props = defineProps({ paused: Boolean })
+
+let player = null
+const clock = new THREE.Clock()
 
 const gotHit = ref(false)
-const health = ref(10)
+const health = ref(100)
 let canBeHit = true
 const immunityTime = 2000
 const damageAngle = ref(null)
+const isPointerLocked = ref(false)
 
 function enablePointerLock() {
-  document.body.requestPointerLock?.()
+  if (!props.paused) {
+    document.body.requestPointerLock?.()
+  }
 }
 
 onMounted(() => {
@@ -33,32 +39,44 @@ onMounted(() => {
   initMovement(scene, player)
 
   updateFunctions.push(() => {
-    handleMovement(player)
+    const delta = Math.min(clock.getDelta(), 0.1)
+    handleMovement(player, delta, props.paused)
   })
 
-  document.addEventListener('pointerlockchange', () => {
-    isPointerLocked = document.pointerLockElement === document.body
-  })
+  const pointerLockListener = () => {
+    isPointerLocked.value = document.pointerLockElement === document.body
+  }
+  document.addEventListener('pointerlockchange', pointerLockListener)
 })
 
 onBeforeUnmount(() => {
-  // limpiar si es necesario
+  clock.stop()
+  destroyMovement(scene)
+  if (player) {
+    scene.remove(player)
+    player = null
+  }
+  delete window.player
+  delete window.setPlayerHit
 })
 
 window.setPlayerHit = (attackerPosition = null) => {
-  if (!canBeHit || health.value <= 0) return
+  if (!canBeHit || health.value <= 0 || props.paused) return
   gotHit.value = true
-  health.value = Math.max(0, health.value - 5)
+  health.value = Math.max(0, health.value - 10)
   canBeHit = false
 
-  if (attackerPosition) {
+  if (attackerPosition && player) {
     const playerPos = player.position.clone()
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+    forward.y = 0
+    forward.normalize()
+
     const toAttacker = attackerPosition.clone().sub(playerPos).setY(0).normalize()
 
     const angle = THREE.MathUtils.radToDeg(forward.angleTo(toAttacker))
     const cross = forward.clone().cross(toAttacker).y
-    damageAngle.value = cross > 0 ? angle : -angle
+    damageAngle.value = cross > 0 ? -angle : angle
   }
 
   setTimeout(() => {
@@ -68,36 +86,3 @@ window.setPlayerHit = (attackerPosition = null) => {
   }, immunityTime)
 }
 </script>
-
-<style scoped>
-.pointer-lock-area {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 999;
-}
-
-.damage-ring {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 1000;
-}
-
-.damage-sector {
-  position: absolute;
-  width: 100px;
-  height: 100px;
-  top: 50%;
-  left: 50%;
-  margin: -50px 0 0 -50px;
-  background: rgba(255, 0, 0, 0.4);
-  border-radius: 50%;
-  clip-path: polygon(50% 50%, 100% 0, 100% 100%);
-}
-</style>

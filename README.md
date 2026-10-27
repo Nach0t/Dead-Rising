@@ -36,6 +36,8 @@ pnpm dev
 docker compose up --build
 ```
 
+Para conectar el frontend a un backend en otra máquina o en producción, define `VITE_API_BASE_URL` en un archivo `.env` junto a `docker-compose.yml` antes de construir. Usa una URL accesible desde el navegador (por ejemplo, la URL pública de tu API). Si no la defines, se utiliza `http://localhost:3000` para desarrollo local.
+
 ## 🧪 Test
 
 ```bash

@@ -15,6 +15,8 @@ let mixers = []
 let spawnInterval = null
 let waitPlayerInterval = null
 let player = null
+let isUnmounted = false
+let spawnInProgress = false
 
 const loader = new GLTFLoader()
 const clock = new THREE.Clock()
@@ -111,17 +113,26 @@ function loadZombieModel() {
 }
 
 async function spawnEnemies(count = 3) {
-  if (!player || props.paused || window.stopSpawning) return
+  if (isUnmounted || !player || props.paused || window.stopSpawning || spawnInProgress) return
 
-  const radius = 10
-  const baseAngle = Math.random() * Math.PI * 2
+  spawnInProgress = true
+  try {
+    const radius = 10
+    const baseAngle = Math.random() * Math.PI * 2
 
-  for (let i = 0; i < count && enemies.length < maxEnemies; i++) {
+    for (let i = 0; i < count && enemies.length < maxEnemies; i++) {
     if (window.stopSpawning) break
 
     const angle = baseAngle + (i / count) * Math.PI * 2
     try {
       const { zombie, mixer } = await loadZombieModel()
+
+      // Discard loads that finish after leaving the current game.
+      if (isUnmounted || window.stopSpawning) {
+        mixer.stopAllAction()
+        disposeZombie(zombie)
+        continue
+      }
 
       let spawnX = player.position.x + Math.cos(angle) * radius
       let spawnZ = player.position.z + Math.sin(angle) * radius
@@ -145,6 +156,9 @@ async function spawnEnemies(count = 3) {
     } catch (err) {
       console.error('❌ Error al generar zombie:', err)
     }
+    }
+  } finally {
+    spawnInProgress = false
   }
 }
 
@@ -280,6 +294,7 @@ watch(
 )
 
 onMounted(() => {
+  isUnmounted = false
   // Esperar de forma segura a que PlayerCube inicialice window.player
   waitPlayerInterval = setInterval(() => {
     if (window.player) {
@@ -293,6 +308,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  isUnmounted = true
   clearInterval(spawnInterval)
   clearInterval(waitPlayerInterval)
 
